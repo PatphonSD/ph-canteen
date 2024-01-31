@@ -60,7 +60,7 @@ const char *ca_cert =
 #define PZEM_SERIAL Serial2
 #define NUM_PZEMS 5
 
-const char *ssid = "PowerHub Canteen 03";
+const char *ssid = "PowerHub Canteen 01";
 const char *password = "powerhubX";
 const char *mqtt_broker = "g8f66080.ala.asia-southeast1.emqxsl.com";
 const char *mqtt_username = "PowerHubSwitch";
@@ -81,17 +81,18 @@ struct Device
 };
 
 Device devices[] = {
-    {"main/canteen000011"},
-    {"main/canteen000012"},
-    {"main/canteen000013"},
-    {"main/canteen000014"},
-    {"main/canteen000015"},
+    {"main/canteen000001"},
+    {"main/canteen000002"},
+    {"main/canteen000003"},
+    {"main/canteen000004"},
+    {"main/canteen000005"},
 };
 
 unsigned long pzemReadInterval = 2000;    // 2000ms สำหรับ PZEM004T
 unsigned long mqttPublishInterval = 4000; // 4000ms สำหรับ MQTT publish
 unsigned long pub_time_now = 0;
-unsigned long time_now = 0;
+unsigned long read_pzem_values_time_now = 0;
+unsigned long print_pzem_values_time_now = 0;
 
 WiFiClientSecure espClient;
 PubSubClient client(espClient);
@@ -104,7 +105,6 @@ void connectToMQTTBroker();
 void checkWifiConnection();
 void readPZEMValues();
 void checkMQTTBrokerConnection();
-void printPZEMValues();
 
 void setupHardware()
 {
@@ -191,9 +191,9 @@ void readPZEMValues()
   unsigned long currentMillis = millis();
   for (const auto &device : devices)
   {
-    if (currentMillis - time_now >= pzemReadInterval)
+    if (currentMillis - read_pzem_values_time_now >= pzemReadInterval)
     {
-      time_now = currentMillis;
+      read_pzem_values_time_now = currentMillis;
       for (int i = 0; i < NUM_PZEMS; i++)
       {
         voltage[i] = pzems[i].voltage();
@@ -207,22 +207,8 @@ void readPZEMValues()
         frequency[i] = pzems[i].frequency();
 
         pf[i] = pzems[i].pf();
-      }
-    }
-  }
-}
 
-void printPZEMValues()
-{
-  unsigned long currentMillis = millis();
-  for (const auto &device : devices)
-  {
-    if (currentMillis - time_now >= pzemReadInterval)
-    {
-      time_now = currentMillis;
-      for (int i = 0; i < NUM_PZEMS; i++)
-      {
-        Serial.print("Device : " + String(device.topic) + "\t" + String(voltage[i]) + "V\t" + String(current[i]) + "A\t" + String(power[i]) + "W\t" + String(energy[i]) + "kWh\t" + String(frequency[i]) + "Hz\n");
+        Serial.print("Device : " + String(devices[i].topic) + "\t" + String(voltage[i]) + "V\t" + String(current[i]) + "A\t" + String(power[i]) + "W\t" + String(energy[i]) + "kWh\t" + String(frequency[i]) + "Hz\n");
       }
     }
   }
@@ -285,6 +271,5 @@ void loop()
   checkWifiConnection();
   checkMQTTBrokerConnection();
   readPZEMValues();
-  printPZEMValues();
   publishDataToMQTTBroker();
 }
